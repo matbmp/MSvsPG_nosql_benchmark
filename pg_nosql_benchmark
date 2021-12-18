@@ -46,7 +46,7 @@ PGHOME="/lib/postgresql/14"
 PGHOST="127.0.0.1"
 PGPORT="5432"
 PGUSER="postgres"
-PGPASSWORD="intuition4"
+PGPASSWORD="admin"
 PGDATABASE="benchmark"
 
 PGBIN="/lib/postgresql/14/bin"
@@ -55,11 +55,10 @@ PGBIN="/lib/postgresql/14/bin"
 # set mongo variables.
 ################################################################################
 MSSQL="/opt/mssql-tools/bin/sqlcmd"
-MONGOIMPORT="/usr/bin/mongoimport"
 MSHOST="127.0.0.1"
 MSPORT="27017"
 MSUSER="SA"
-MSPASSWORD="Intuition4"
+MSPASSWORD="Admin1234"
 MSDATABASE="benchmark"
 
 COLLECTION_NAME="json_tables"
