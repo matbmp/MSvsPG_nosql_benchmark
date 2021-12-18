@@ -73,7 +73,7 @@ export PATH=$PGBIN:$PATH
 ################################################################################
 source ${DIRECTORY}/lib/pg_func_lib.sh
 #source ${DIRECTORY}/lib/mongo_func_lib.sh
-source ${DIRECTORY}/lib/mssql2_func_lib.sh
+source ${DIRECTORY}/lib/mssql_func_lib.sh
 
 
 ################################################################################
