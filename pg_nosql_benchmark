@@ -230,7 +230,6 @@ do
                                             "${MSPASSWORD}" \
                                             "${COLLECTION_NAME}"
                           )
-
    exit 1
 
    drop_mongocollection "${MONGOHOST}"     \
@@ -240,13 +239,13 @@ do
                         "${MONGOPASSWORD}" \
                         "${COLLECTION_NAME}"
 
-   mongo_inserts_time[${indx}]=$(mongodb_inserts_benchmark "${MONGOHOST}"       \
-                                                           "${MONGOPORT}"       \
-                                                           "${MONGODBNAME}"     \
-                                                           "${MONGOUSER}"       \
-                                                           "${MONGOPASSWORD}"   \
+   ms_inserts_time[${indx}]=$(ms_inserts_benchmark "${MSHOST}"       \
+                                                           "${MSPORT}"       \
+                                                           "${MSDBATABASE}"     \
+                                                           "${MSUSER}"       \
+                                                           "${MSPASSWORD}"   \
                                                            "${COLLECTION_NAME}" \
-                                                            "${MONGO_INSERTS}"
+                                                            "${MS_INSERTS}"
                                 )
    delete_json_data "${PGHOST}"      \
                     "${PGPORT}"      \
@@ -271,10 +270,10 @@ print_result "PG COPY (ns)"       "${pg_copy_time[@]}"
 print_result "PG INSERT (ns)"     "${pg_inserts_time[@]}"
 print_result "PG SELECT (ns)"     "${pg_select_time[@]}"
 print_result "PG SIZE (bytes)"    "${pg_size_time[@]}"
-print_result "MONGO IMPORT (ns)"  "${mongo_copy_time[@]}"
-print_result "MONGO INSERT (ns)"  "${mongo_inserts_time[@]}"
-print_result "MONGO SELECT (ns)"  "${mongo_select_time[@]}"
-print_result "MONGO SIZE (bytes)" "${mongo_size_time[@]}"
+print_result "MONGO IMPORT (ns)"  "${ms_copy_time[@]}"
+print_result "MONGO INSERT (ns)"  "${ms_inserts_time[@]}"
+print_result "MONGO SELECT (ns)"  "${ms_select_time[@]}"
+print_result "MONGO SIZE (bytes)" "${ms_size_time[@]}"
 
 rm -rf ${SAMPLEJSON}*
 rm -rf ${PG_INSERTS}

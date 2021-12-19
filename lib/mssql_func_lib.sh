@@ -260,21 +260,20 @@ function ms_copy_benchmark ()
 ################################################################################
 # function: benchmark postgresql inserts
 ################################################################################
-function pg_inserts_benchmark ()
+function ms_inserts_benchmark ()
 {
-
-   typeset -r F_PGHOST="$1"
-   typeset -r F_PGPORT="$2"
+   typeset -r F_MSHOST="$1"
+   typeset -r F_MSPORT="$2"
    typeset -r F_DBNAME="$3"
-   typeset -r F_PGUSER="$4"
-   typeset -r F_PGPASSWORD="$5"
+   typeset -r F_MSUSER="$4"
+   typeset -r F_MSPASSWORD="$5"
    typeset -r F_COLLECTION="$6"
    typeset -r F_INSERTS="$7"
 
-   process_log "inserting data in postgresql using ${F_INSERTS}."
+   process_log "inserting data in mssql using ${F_INSERTS}."
    start_time=$(get_timestamp_nano)
-   run_sql_file "${F_PGHOST}" "${F_PGPORT}" "${F_DBNAME}" "${F_PGUSER}" \
-                "${F_PGPASSWORD}" "${F_INSERTS}"
+   output=$(run_mssql "${F_MSHOST}" "${F_MSPORT}" "${F_DBNAME}" "${F_MSUSER}" \
+           "${F_MSPASSWORD}" "${F_INSERTS}")
    end_time=$(get_timestamp_nano)
    total_time="$(get_timestamp_diff_nano "${end_time}" "${start_time}")"
 
