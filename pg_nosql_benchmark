@@ -46,13 +46,13 @@ PGHOME="/lib/postgresql/14"
 PGHOST="127.0.0.1"
 PGPORT="5432"
 PGUSER="postgres"
-PGPASSWORD="admin"
+PGPASSWORD="EloElo123"
 PGDATABASE="benchmark"
 
 PGBIN="/lib/postgresql/14/bin"
 
 ################################################################################
-# set mongo variables.
+# set mssql variables.
 ################################################################################
 MSSQL="/opt/mssql-tools/bin/sqlcmd"
 MSHOST="127.0.0.1"
@@ -231,15 +231,14 @@ do
                                             "${COLLECTION_NAME}"
                           )
 
-   exit 1
 
-   drop_mongocollection "${MONGOHOST}"     \
-                        "${MONGOPORT}"     \
-                        "${MONGODBNAME}"   \
-                        "${MONGOUSER}"     \
-                        "${MONGOPASSWORD}" \
-                        "${COLLECTION_NAME}"
-
+   mssql_dropping "${MSHOST}"     \
+                  "${MSPORT}"     \
+                  "${MSDATABASE}"   \
+                  "${MSUSER}"     \
+                  "${MSPASSWORD}" \
+                  "${COLLECTION_NAME}"
+exit 1
    mongo_inserts_time[${indx}]=$(mongodb_inserts_benchmark "${MONGOHOST}"       \
                                                            "${MONGOPORT}"       \
                                                            "${MONGODBNAME}"     \

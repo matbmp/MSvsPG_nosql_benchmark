@@ -377,3 +377,20 @@ function mssql_version ()
    echo "${version}"
 
 }
+
+##############################################################################
+# function mk_ms_json_collection
+##############################################################################
+function mssql_dropping ()
+{
+  typeset -r F_MSHOST="$1"
+  typeset -r F_MSPORT="$2"
+  typeset -r F_DBNAME="$3"
+  typeset -r F_MSUSER="$4"
+  typeset -r F_MSPASSWORD="$5"
+  typeset -r F_TABLE="$6"
+  typeset -r F_SQL1="DROP TABLE IF EXISTS ${F_TABLE} CASCADE; GO"	
+  process_log "${F_TABLE} dropped in MSSQL."
+  output=$(run_mssql "${F_MSHOST}" "${F_MSPORT}" "${F_DBNAME}" "${F_MSUSER}" \	"${F_MSPASSWORD}" "${F_SQL1}")
+}
+
