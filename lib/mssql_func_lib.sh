@@ -48,11 +48,13 @@ function mssql_json_insert_maker ()
    process_log "preparing mssql INSERTs."
    rm -rf ${JSON_FILENAME}
    NO_OF_LOOPS=$((${NO_OF_ROWS}/11 + 1 ))
+   echo "SET QUOTED_IDENTIFIER ON;
+   " >> ${JSON_FILENAME}
    for ((i=0;i<${NO_OF_LOOPS};i++))
    do
        json_seed_data $i | \
-        sed "s/^/INSERT INTO ${COLLECTION_NAME} VALUES(\$JSON\$/"| \
-        sed "s/$/\$JSON\$);/" >>${JSON_FILENAME}
+        sed "s/^/INSERT INTO ${COLLECTION_NAME} VALUES(\'/"| \
+        sed "s/$/\');/" >>${JSON_FILENAME}
    done
    echo " GO" >> ${JSON_FILENAME}
 }
@@ -60,20 +62,22 @@ function mssql_json_insert_maker ()
 ################################################################################
 # run_sql_file: send SQL from a file to database
 ################################################################################
-function run_sql_file ()
+function run_mssql_file ()
 {
-   typeset -r F_PGHOST="$1"
-   typeset -r F_PGPORT="$2"
+   typeset -r F_MSHOST="$1"
+   typeset -r F_MSPORT="$2"
    typeset -r F_DBNAME="$3"
-   typeset -r F_PGUSER="$4"
-   typeset -r F_PGPASSWORD="$5"
-   typeset -r F_SQLFILE="$6"
+   typeset -r F_MSUSER="$4"
+   typeset -r F_MSPASSWORD="$5"
+   typeset -r F_FILE="$6"
 
-   export PGPASSWORD="${F_PGPASSWORD}"
-   ${PGHOME}/bin/psql -qAt -h ${F_PGHOST} -p ${F_PGPORT} -U ${F_PGUSER} \
-                  --single-transaction -d ${F_DBNAME} -f "${F_SQLFILE}"
+   
+   ${MSSQL} -H ${F_MSHOST} \
+           -d ${F_DBNAME} \
+           -U ${F_MSUSER} \
+           -P ${F_MSPASSWORD} \
+           -i ${F_FILE}
 }
-
 ################################################################################
 # run_sql: send SQL to database
 ################################################################################
@@ -93,6 +97,25 @@ function run_mssql ()
            -Q "${F_SQL}"
 }
 
+function run_mssql_opt ()
+{
+   typeset -r F_MSHOST="$1"
+   typeset -r F_MSPORT="$2"
+   typeset -r F_DBNAME="$3"
+   typeset -r F_MSUSER="$4"
+   typeset -r F_MSPASSWORD="$5"
+   typeset -r F_OPT="$6"
+   typeset -r F_SQL="$7"
+
+   ${MSSQL} -H ${F_MSHOST} \
+           -d ${F_DBNAME} \
+           -U ${F_MSUSER} \
+           -P ${F_MSPASSWORD} \
+	   ${F_OPT} \
+           -Q "${F_SQL}"
+}
+
+
 ################################################################################
 # function: remove_pgdb (remove postgresql database)
 ################################################################################
@@ -106,8 +129,8 @@ function remove_ms_db ()
    typeset -r F_SQL="DROP DATABASE IF EXISTS ${F_DBNAME};"
 
    process_log "droping database ${F_DBNAME} if exists."
-   output=$(run_mssql "${F_MSHOST}" "${F_MSPORT}" "${F_DBNAME}" "${F_MSUSER}" \
-           "${F_MSPASSWORD}" "${F_SQL}")
+   run_mssql "${F_MSHOST}" "${F_MSPORT}" "master" "${F_MSUSER}" \
+           "${F_MSPASSWORD}" "${F_SQL}"
 }
 
 ################################################################################
@@ -123,8 +146,8 @@ function create_ms_db ()
    typeset -r F_SQL="CREATE DATABASE ${F_DBNAME};"
 
    process_log "creating database ${F_DBNAME}."
-   output=$(run_mssql "${F_MSHOST}" "${F_MSPORT}" "${F_DBNAME}" "${F_MSUSER}" \
-           "${F_MSPASSWORD}" "${F_SQL}")
+   run_mssql "${F_MSHOST}" "${F_MSPORT}" "master" "${F_MSUSER}" \
+           "${F_MSPASSWORD}" "${F_SQL}"
 }
 
 ################################################################################
@@ -138,15 +161,19 @@ function ms_relation_size ()
    typeset -r F_MSUSER="$4"
    typeset -r F_MSPASSWORD="$5"
    typeset -r F_RELATION="$6"
-   typeset -r F_SQL="SELECT CAST(ROUND((SUM(a.used_pages) / 128.00), 2) AS NUMERIC(36, 2)) FROM sys.tables t
+   typeset -r F_SQL="SELECT CAST((SUM(a.used_pages) * 1024) AS NUMERIC(36, 0)) FROM sys.tables t
 INNER JOIN sys.indexes i ON t.OBJECT_ID = i.object_id
 INNER JOIN sys.partitions p ON i.object_id = p.OBJECT_ID AND i.index_id = p.index_id
 INNER JOIN sys.allocation_units a ON p.partition_id = a.container_id
-WHERE t = '${F_RELATION}'; GO"
+WHERE t.Name = '${F_RELATION}'
+GO"
 
    process_log "calculating MSSQL collection size."
    output=$(run_mssql "${F_MSHOST}" "${F_MSPORT}" "${F_DBNAME}" "${F_MSUSER}" \
-           "${F_MSPASSWORD}" "${F_SQL}")
+	   "${F_MSPASSWORD}" "${F_SQL}")
+   roz=$(echo ${output} | egrep -o '[0-9]+' | cut -f1 -d' ')
+   roz=$(echo $roz | cut -f1 -d' ')
+   echo "$roz"
 }
 
 ################################################################################
@@ -161,11 +188,12 @@ function if_msdbexists ()
    typeset -r F_MSPASSWORD="$5"
 
    typeset -r F_SQL="SELECT COUNT(1)
-                     FROM pg_catalog.pg_database
-                        WHERE datname='${F_DBNAME}'; GO"
-
-   output=$(run_mssql "${F_MSHOST}" "${F_MSPORT}" "${F_DBNAME}" "${F_MSUSER}" \
-           "${F_MSPASSWORD}" "${F_SQL}")
+                     FROM INFORMATION_SCHEMA.TABLES
+                        WHERE TABLE_NAME='${F_DBNAME}';
+			GO"
+   run_mssql "${F_MSHOST}" "${F_MSPORT}" "${F_DBNAME}" "${F_MSUSER}" \
+           "${F_MSPASSWORD}" "${F_SQL}"
+   process_log "msexist= ${output}"
    echo ${output}
 }
 
@@ -180,14 +208,18 @@ function mk_ms_json_collection ()
    typeset -r F_MSUSER="$4"
    typeset -r F_MSPASSWORD="$5"
    typeset -r F_TABLE="$6"
-   typeset -r F_SQL1="DROP TABLE IF EXISTS ${F_TABLE} CASCADE; GO"
-   typeset -r F_SQL2="CREATE TABLE  ${F_TABLE} (data JSONB); GO"
+   typeset -r F_SQL1="DROP TABLE IF EXISTS ${F_TABLE};
+   			GO"
+   typeset -r F_SQL2="	CREATE TABLE ${F_TABLE} (
+   			data NVARCHAR(MAX)
+			);
+			GO"
 
   process_log "creating ${F_TABLE} collection in MSSQL."
-  output=$(run_mssql "${F_MSHOST}" "${F_MSPORT}" "${F_DBNAME}" "${F_MSUSER}" \
-           "${F_MSPASSWORD}" "${F_SQL1}")
-  output=$(run_mssql "${F_MSHOST}" "${F_MSPORT}" "${F_DBNAME}" "${F_MSUSER}" \
-           "${F_MSPASSWORD}" "${F_SQL2}")
+  run_mssql "${F_MSHOST}" "${F_MSPORT}" "${F_DBNAME}" "${F_MSUSER}" \
+           "${F_MSPASSWORD}" "${F_SQL1}"
+  run_mssql "${F_MSHOST}" "${F_MSPORT}" "${F_DBNAME}" "${F_MSUSER}" \
+           "${F_MSPASSWORD}" "${F_SQL2}"
 }
 
 ################################################################################
@@ -201,11 +233,15 @@ function ms_create_index_collection ()
    typeset -r F_MSUSER="$4"
    typeset -r F_MSPASSWORD="$5"
    typeset -r F_TABLE="$6"
-   typeset -r F_SQL="CREATE INDEX ${F_TABLE}_idx ON ${F_TABLE} USING gin(data); GO"
+   typeset -r F_SQL="	ALTER TABLE ${F_TABLE}
+			ADD brand AS JSON_VALUE(data, '$.brand');
+			SET QUOTED_IDENTIFIER ON;
+			CREATE INDEX ${F_TABLE}_idx ON ${F_TABLE}(brand);
+   			GO"
 
    process_log "creating index on MSSQL collections."
-   output=$(run_mssql "${F_MSHOST}" "${F_MSPORT}" "${F_DBNAME}" "${F_MSUSER}" \
-           "${F_MSPASSWORD}" "${F_SQL}")
+   run_mssql "${F_MSHOST}" "${F_MSPORT}" "${F_DBNAME}" "${F_MSUSER}" \
+           "${F_MSPASSWORD}" "${F_SQL}"
 }
 
 ################################################################################
@@ -237,25 +273,24 @@ function ms_copy_benchmark ()
    typeset -r F_DBNAME="$3"
    typeset -r F_MSUSER="$4"
    typeset -r F_MSPASSWORD="$5"
-
    typeset -r F_COLLECTION="$6"
    typeset -r F_JSONFILE="$7"
-   typeset -r F_COPY="COPY ${F_COLLECTION} FROM STDIN;"
+   typeset -r F_COPY="	BULK INSERT json_tables FROM '$PWD/${F_JSONFILE}';
+   			GO"
 
-   DBEXISTS=$(if_msdbexists "${F_MSHOST}" "${F_MSPORT}" "${F_DBNAME}" \
-                          "${F_MSUSER}" "${F_MSPASSWORD}")
+   #DBEXISTS=$(if_msdbexists "${F_MSHOST}" "${F_MSPORT}" "${F_DBNAME}" \
+   #                      "${F_MSUSER}" "${F_MSPASSWORD}")
    process_log "loading data in mssql using ${F_JSONFILE}."
    start_time=$(get_timestamp_nano)
-   cat ${F_JSONFILE}| run_mssql "${F_MSHOST}" "${F_MSPORT}" "${F_DBNAME}" "${F_MSUSER}" \
-           "${F_MSPASSWORD}" "${F_COPY}"
-
+   run_mssql "${F_MSHOST}" "${F_MSPORT}" "${F_DBNAME}" "${F_MSUSER}" \
+           "${F_MSPASSWORD}" "${F_COPY}" \
+	   >/dev/null
    end_time=$(get_timestamp_nano)
    total_time="$(get_timestamp_diff_nano "${end_time}" "${start_time}")"
 
    echo "${total_time}"
 
 }
-
 
 ################################################################################
 # function: benchmark postgresql inserts
@@ -268,12 +303,13 @@ function ms_inserts_benchmark ()
    typeset -r F_MSUSER="$4"
    typeset -r F_MSPASSWORD="$5"
    typeset -r F_COLLECTION="$6"
-   typeset -r F_INSERTS="$7"
+   typeset -r F_INSERTS="$PWD/$7"
 
    process_log "inserting data in mssql using ${F_INSERTS}."
    start_time=$(get_timestamp_nano)
-   output=$(run_mssql "${F_MSHOST}" "${F_MSPORT}" "${F_DBNAME}" "${F_MSUSER}" \
-           "${F_MSPASSWORD}" "${F_INSERTS}")
+   run_mssql_file "${F_MSHOST}" "${F_MSPORT}" "${F_DBNAME}" "${F_MSUSER}" \
+           "${F_MSPASSWORD}" "${F_INSERTS}" \
+	   >> /dev/null
    end_time=$(get_timestamp_nano)
    total_time="$(get_timestamp_diff_nano "${end_time}" "${start_time}")"
 
@@ -388,8 +424,9 @@ function mssql_dropping ()
   typeset -r F_MSUSER="$4"
   typeset -r F_MSPASSWORD="$5"
   typeset -r F_TABLE="$6"
-  typeset -r F_SQL1="DROP TABLE IF EXISTS ${F_TABLE} CASCADE; GO"	
+  typeset -r F_SQL1="	DROP TABLE IF EXISTS ${F_TABLE};
+  			GO"	
   process_log "${F_TABLE} dropped in MSSQL."
-  output=$(run_mssql "${F_MSHOST}" "${F_MSPORT}" "${F_DBNAME}" "${F_MSUSER}" \	"${F_MSPASSWORD}" "${F_SQL1}")
+  run_mssql "${F_MSHOST}" "${F_MSPORT}" "master" "${F_MSUSER}" \	"${F_MSPASSWORD}" "${F_SQL1}"
 }
 

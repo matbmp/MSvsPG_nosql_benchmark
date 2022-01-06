@@ -72,7 +72,6 @@ export PATH=$PGBIN:$PATH
 # source library files
 ################################################################################
 source ${DIRECTORY}/lib/pg_func_lib.sh
-#source ${DIRECTORY}/lib/mongo_func_lib.sh
 source ${DIRECTORY}/lib/mssql_func_lib.sh
 
 
@@ -86,11 +85,11 @@ declare -a pg_copy_time
 declare -a pg_inserts_time
 declare -a pg_select_time
 
-# mongo specific arrays
-declare -a mongo_size_time
-declare -a mongo_copy_time
-declare -a mongo_inserts_time
-declare -a mongo_select_time
+# ms specific arrays
+declare -a ms_size_time
+declare -a ms_copy_time
+declare -a ms_inserts_time
+declare -a ms_select_time
 
 ################################################################################
 # main function
@@ -176,7 +175,6 @@ do
                                               "${SAMPLEJSON}"
                           )
 
-
    pg_create_index_collection "${PGHOST}"     \
                               "${PGPORT}"     \
                               "${PGDATABASE}" \
@@ -192,7 +190,7 @@ do
                                               "${COLLECTION_NAME}" \
                                               "${SAMPLEJSON}"
 			)
-
+   echo "$ms_copy_time[@]"
    ms_create_index_collection "${MSHOST}"     \
                               "${MSPORT}"     \
                               "${MSDATABASE}" \
@@ -223,6 +221,8 @@ do
                                                  "${MSPASSWORD}" \
                                                  "${COLLECTION_NAME}"
                             )
+   
+   echo "$ms_select_time[@]"
    ms_size_time[${indx}]=$(ms_relation_size "${MSHOST}"     \
                                             "${MSPORT}"     \
                                             "${MSDATABASE}" \
@@ -231,6 +231,7 @@ do
                                             "${COLLECTION_NAME}"
                           )
 
+   echo "$ms_size_time[@]"
    mssql_dropping "${MSHOST}"     \
                   "${MSPORT}"     \
                   "${MSDATABASE}"   \
@@ -246,6 +247,8 @@ do
                                                            "${COLLECTION_NAME}" \
                                                             "${MS_INSERTS}"
                                 )
+   
+   echo "$ms_inserts_time[@]"
    delete_json_data "${PGHOST}"      \
                     "${PGPORT}"      \
                     "${PGDATABASE}"  \
@@ -269,11 +272,11 @@ print_result "PG COPY (ns)"       "${pg_copy_time[@]}"
 print_result "PG INSERT (ns)"     "${pg_inserts_time[@]}"
 print_result "PG SELECT (ns)"     "${pg_select_time[@]}"
 print_result "PG SIZE (bytes)"    "${pg_size_time[@]}"
-print_result "MONGO IMPORT (ns)"  "${ms_copy_time[@]}"
-print_result "MONGO INSERT (ns)"  "${ms_inserts_time[@]}"
-print_result "MONGO SELECT (ns)"  "${ms_select_time[@]}"
-print_result "MONGO SIZE (bytes)" "${ms_size_time[@]}"
+print_result "MS COPY (ns)"  "${ms_copy_time[@]}"
+print_result "MS INSERT (ns)"  "${ms_inserts_time[@]}"
+print_result "MS SELECT (ns)"  "${ms_select_time[@]}"
+print_result "MS SIZE (bytes)" "${ms_size_time[@]}"
 
 rm -rf ${SAMPLEJSON}*
 rm -rf ${PG_INSERTS}
-rm -rf ${MONGO_INSERTS}
+rm -rf ${MS_INSERTS}
