@@ -235,8 +235,12 @@ function ms_create_index_collection ()
    typeset -r F_TABLE="$6"
    typeset -r F_SQL="	ALTER TABLE ${F_TABLE}
 			ADD brand AS JSON_VALUE(data, '$.brand');
+			ALTER TABLE ${F_TABLE}
+			ADD name AS JSON_VALUE(data, '$.name');
+			ALTER TABLE ${F_TABLE}
+			ADD type AS JSON_VALUE(data, '$.type');
 			SET QUOTED_IDENTIFIER ON;
-			CREATE INDEX ${F_TABLE}_idx ON ${F_TABLE}(brand);
+			CREATE INDEX ${F_TABLE}_idx ON ${F_TABLE}(brand, name, type);
    			GO"
 
    process_log "creating index on MSSQL collections."
@@ -329,16 +333,16 @@ function ms_select_benchmark ()
    typeset -r F_COLLECTION="$6"
    typeset -r F_SELECT1="SELECT data
                          FROM ${F_COLLECTION}
-                           WHERE  (data->>'brand') = 'ACME'; GO"
+                           WHERE  JSON_VALUE(data, '$.brand') = 'ACME'; GO"
    typeset -r F_SELECT2="SELECT data
                          FROM ${F_COLLECTION}
-                           WHERE  (data->>'name') = 'Phone Service Basic Plan'; GO"
+                           WHERE  JSON_VALUE(data, '$.name') = 'Phone Service Basic Plan'; GO"
    typeset -r F_SELECT3="SELECT data
                          FROM ${F_COLLECTION}
-                          WHERE  (data->>'name') = 'AC3 Case Red'; GO"
+                          WHERE  JSON_VALUE(data, '$.name') = 'AC3 Case Red'; GO"
    typeset -r F_SELECT4="SELECT data
                           FROM ${F_COLLECTION}
-                            WHERE  (data->>'type') = 'service'; GO"
+                            WHERE  JSON_VALUE(data, '$.type') = 'service'; GO"
    local START end_time
 
    process_log "testing FIRST SELECT in mssql."
