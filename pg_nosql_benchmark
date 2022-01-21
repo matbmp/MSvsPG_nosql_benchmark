@@ -78,7 +78,7 @@ source ${DIRECTORY}/lib/mssql_func_lib.sh
 ################################################################################
 # declare require arrays
 ################################################################################
-declare -a json_rows=(10)
+declare -a json_rows=(1000)
 
 declare -a pg_size_time
 declare -a pg_copy_time

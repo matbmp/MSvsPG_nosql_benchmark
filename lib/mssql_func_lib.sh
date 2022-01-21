@@ -233,6 +233,7 @@ function ms_create_index_collection ()
    typeset -r F_MSUSER="$4"
    typeset -r F_MSPASSWORD="$5"
    typeset -r F_TABLE="$6"
+   
    typeset -r F_SQL="	ALTER TABLE ${F_TABLE}
 			ADD brand AS JSON_VALUE(data, '$.brand');
 			ALTER TABLE ${F_TABLE}
@@ -242,6 +243,8 @@ function ms_create_index_collection ()
 			SET QUOTED_IDENTIFIER ON;
 			CREATE INDEX ${F_TABLE}_idx ON ${F_TABLE}(brand, name, type);
    			GO"
+  typeset -r F_SQL2="SELECT 1;
+  			GO"
 
    process_log "creating index on MSSQL collections."
    run_mssql "${F_MSHOST}" "${F_MSPORT}" "${F_DBNAME}" "${F_MSUSER}" \
@@ -428,9 +431,9 @@ function mssql_dropping ()
   typeset -r F_MSUSER="$4"
   typeset -r F_MSPASSWORD="$5"
   typeset -r F_TABLE="$6"
-  typeset -r F_SQL1="	DROP TABLE IF EXISTS ${F_TABLE};
+  typeset -r F_SQL1="	TRUNCATE TABLE ${F_TABLE};
   			GO"	
   process_log "${F_TABLE} dropped in MSSQL."
-  run_mssql "${F_MSHOST}" "${F_MSPORT}" "master" "${F_MSUSER}" \	"${F_MSPASSWORD}" "${F_SQL1}"
+  run_mssql "${F_MSHOST}" "${F_MSPORT}" "${F_DBNAME}" "${F_MSUSER}" \	"${F_MSPASSWORD}" "${F_SQL1}"
 }
 
