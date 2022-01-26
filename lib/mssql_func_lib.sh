@@ -126,7 +126,8 @@ function remove_ms_db ()
    typeset -r F_DBNAME="$3"
    typeset -r F_MSUSER="$4"
    typeset -r F_MSPASSWORD="$5"
-   typeset -r F_SQL="DROP DATABASE IF EXISTS ${F_DBNAME};"
+   typeset -r F_SQL="DROP DATABASE IF EXISTS ${F_DBNAME};
+   			GO"
 
    process_log "droping database ${F_DBNAME} if exists."
    run_mssql "${F_MSHOST}" "${F_MSPORT}" "master" "${F_MSUSER}" \
@@ -143,7 +144,8 @@ function create_ms_db ()
    typeset -r F_DBNAME="$3"
    typeset -r F_MSUSER="$4"
    typeset -r F_MSPASSWORD="$5"
-   typeset -r F_SQL="CREATE DATABASE ${F_DBNAME};"
+   typeset -r F_SQL="CREATE DATABASE ${F_DBNAME};
+   			GO"
 
    process_log "creating database ${F_DBNAME}."
    run_mssql "${F_MSHOST}" "${F_MSPORT}" "master" "${F_MSUSER}" \
@@ -315,8 +317,7 @@ function ms_inserts_benchmark ()
    process_log "inserting data in mssql using ${F_INSERTS}."
    start_time=$(get_timestamp_nano)
    run_mssql_file "${F_MSHOST}" "${F_MSPORT}" "${F_DBNAME}" "${F_MSUSER}" \
-           "${F_MSPASSWORD}" "${F_INSERTS}" \
-	   >> /dev/null
+           "${F_MSPASSWORD}" "${F_INSERTS}" >> /dev/null
    end_time=$(get_timestamp_nano)
    total_time="$(get_timestamp_diff_nano "${end_time}" "${start_time}")"
 
@@ -334,45 +335,51 @@ function ms_select_benchmark ()
    typeset -r F_MSUSER="$4"
    typeset -r F_MSPASSWORD="$5"
    typeset -r F_COLLECTION="$6"
-   typeset -r F_SELECT1="SELECT data
+   typeset -r F_SELECT1="SET QUOTED_IDENTIFIER OFF;
+   			GO
+   			 SELECT data
                          FROM ${F_COLLECTION}
-                           WHERE  JSON_VALUE(data, '$.brand') = 'ACME'; GO"
+                           WHERE  JSON_VALUE(data, '$.brand') = 'ACME';
+			   GO"
    typeset -r F_SELECT2="SELECT data
                          FROM ${F_COLLECTION}
-                           WHERE  JSON_VALUE(data, '$.name') = 'Phone Service Basic Plan'; GO"
+                           WHERE  JSON_VALUE(data, '$.name') = 'Phone Service Basic Plan';
+			   GO"
    typeset -r F_SELECT3="SELECT data
                          FROM ${F_COLLECTION}
-                          WHERE  JSON_VALUE(data, '$.name') = 'AC3 Case Red'; GO"
+                          WHERE  JSON_VALUE(data, '$.name') = 'AC3 Case Red';
+			  GO"
    typeset -r F_SELECT4="SELECT data
                           FROM ${F_COLLECTION}
-                            WHERE  JSON_VALUE(data, '$.type') = 'service'; GO"
+                            WHERE  JSON_VALUE(data, '$.type') = 'service';
+			    GO"
    local START end_time
 
    process_log "testing FIRST SELECT in mssql."
    start_time=$(get_timestamp_nano)
    run_mssql "${F_MSHOST}" "${F_MSPORT}" "${F_DBNAME}" "${F_MSUSER}" \
-           "${F_MSPASSWORD}" "${F_SELECT1}" >/dev/null || exit_on_error "failed to execute SELECT 1."
+           "${F_MSPASSWORD}" "${F_SELECT1}" >> /dev/null || exit_on_error "failed to execute SELECT 1."
    end_time=$(get_timestamp_nano)
    total_time1="$(get_timestamp_diff_nano "${end_time}" "${start_time}")"
 
    process_log "testing SECOND SELECT in mssql."
    start_time=$(get_timestamp_nano)
    run_mssql "${F_MSHOST}" "${F_MSPORT}" "${F_DBNAME}" "${F_MSUSER}" \
-           "${F_MSPASSWORD}" "${F_SELECT2}" >/dev/null || exit_on_error "failed to execute SELECT 2."
+           "${F_MSPASSWORD}" "${F_SELECT2}" >> /dev/null || exit_on_error "failed to execute SELECT 2."
    end_time=$(get_timestamp_nano)
    total_time2="$(get_timestamp_diff_nano "${end_time}" "${start_time}")"
 
    process_log "testing THIRD SELECT in mssql."
    start_time=$(get_timestamp_nano)
    run_mssql "${F_MSHOST}" "${F_MSPORT}" "${F_DBNAME}" "${F_MSUSER}" \
-           "${F_MSPASSWORD}" "${F_SELECT3}" >/dev/null || exit_on_error "failed to execute SELECT 3."
+           "${F_MSPASSWORD}" "${F_SELECT3}" >> /dev/null || exit_on_error "failed to execute SELECT 3."
    end_time=$(get_timestamp_nano)
    total_time3="$(get_timestamp_diff_nano "${end_time}" "${start_time}")"
 
    process_log "testing FOURTH SELECT in mssql."
    start_time=$(get_timestamp_nano)
    run_mssql "${F_MSHOST}" "${F_MSPORT}" "${F_DBNAME}" "${F_MSUSER}" \
-           "${F_MSPASSWORD}" "${F_SELECT4}" >/dev/null || exit_on_error "failed to execute SELECT 4."
+           "${F_MSPASSWORD}" "${F_SELECT4}" >> /dev/null || exit_on_error "failed to execute SELECT 4."
    end_time=$(get_timestamp_nano)
    total_time4="$(get_timestamp_diff_nano "${end_time}" "${start_time}")"
 
@@ -410,7 +417,8 @@ function mssql_version ()
    typeset -r F_DBNAME="$3"
    typeset -r F_MSUSER="$4"
    typeset -r F_MSPASSWORD="$5"
-   typeset -r F_SQL="SELECT @@VERSION GO"
+   typeset -r F_SQL="SELECT @@VERSION;
+  			 GO"
 
    output=$(run_mssql "${F_MSHOST}" "${F_MSPORT}" "${F_DBNAME}" "${F_MSUSER}" \
            "${F_MSPASSWORD}" "${F_SQL}")
@@ -433,7 +441,7 @@ function mssql_dropping ()
   typeset -r F_TABLE="$6"
   typeset -r F_SQL1="	TRUNCATE TABLE ${F_TABLE};
   			GO"	
-  process_log "${F_TABLE} dropped in MSSQL."
-  run_mssql "${F_MSHOST}" "${F_MSPORT}" "${F_DBNAME}" "${F_MSUSER}" \	"${F_MSPASSWORD}" "${F_SQL1}"
+  process_log "deleting rows in MSSQL."
+  run_mssql "${F_MSHOST}" "${F_MSPORT}" "${F_DBNAME}" "${F_MSUSER}" "${F_MSPASSWORD}" "${F_SQL1}"
 }
 

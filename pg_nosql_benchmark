@@ -78,7 +78,7 @@ source ${DIRECTORY}/lib/mssql_func_lib.sh
 ################################################################################
 # declare require arrays
 ################################################################################
-declare -a json_rows=(1000)
+declare -a json_rows=(10000)
 
 declare -a pg_size_time
 declare -a pg_copy_time
@@ -116,7 +116,7 @@ for (( indx=0 ; indx < ${#json_rows[@]} ; indx++ ))
 do
    generate_json_rows "${json_rows[${indx}]}" \
                       "${SAMPLEJSON}"
-
+   echo `ls -lh | grep sample`
    pg_json_insert_maker "${COLLECTION_NAME}"    \
                         "${json_rows[${indx}]}" \
                         "${PG_INSERTS}"
