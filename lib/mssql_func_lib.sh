@@ -49,14 +49,15 @@ function mssql_json_insert_maker ()
    rm -rf ${JSON_FILENAME}
    NO_OF_LOOPS=$((${NO_OF_ROWS}/11 + 1 ))
    echo "SET QUOTED_IDENTIFIER ON;
-   " >> ${JSON_FILENAME}
+   GO" >> ${JSON_FILENAME}
    for ((i=0;i<${NO_OF_LOOPS};i++))
    do
        json_seed_data $i | \
         sed "s/^/INSERT INTO ${COLLECTION_NAME} VALUES(\'/"| \
-        sed "s/$/\');/" >>${JSON_FILENAME}
+        sed "s/$/\');/" >>"${JSON_FILENAME}"
+   	echo "
+	GO" >> ${JSON_FILENAME}
    done
-   echo " GO" >> ${JSON_FILENAME}
 }
 
 ################################################################################
@@ -243,7 +244,9 @@ function ms_create_index_collection ()
 			ALTER TABLE ${F_TABLE}
 			ADD type AS JSON_VALUE(data, '$.type');
 			SET QUOTED_IDENTIFIER ON;
-			CREATE INDEX ${F_TABLE}_idx ON ${F_TABLE}(brand, name, type);
+			CREATE INDEX ${F_TABLE}_idx_brand ON ${F_TABLE}(brand);
+			CREATE INDEX ${F_TABLE}_idx_name ON ${F_TABLE}(name);
+			CREATE INDEX ${F_TABLE}_idx_type ON ${F_TABLE}(type);
    			GO"
   typeset -r F_SQL2="SELECT 1;
   			GO"
@@ -293,7 +296,7 @@ function ms_copy_benchmark ()
    start_time=$(get_timestamp_nano)
    run_mssql "${F_MSHOST}" "${F_MSPORT}" "${F_DBNAME}" "${F_MSUSER}" \
            "${F_MSPASSWORD}" "${F_COPY}" \
-	   >/dev/null
+	   >>/dev/null
    end_time=$(get_timestamp_nano)
    total_time="$(get_timestamp_diff_nano "${end_time}" "${start_time}")"
 
@@ -313,11 +316,13 @@ function ms_inserts_benchmark ()
    typeset -r F_MSPASSWORD="$5"
    typeset -r F_COLLECTION="$6"
    typeset -r F_INSERTS="$PWD/$7"
+   typeset -r NO_OF_ROWS="$8"
+   NO_OF_LOOPS=$((${NO_OF_ROWS}/$((11*1000)) + 1 ))
 
    process_log "inserting data in mssql using ${F_INSERTS}."
    start_time=$(get_timestamp_nano)
    run_mssql_file "${F_MSHOST}" "${F_MSPORT}" "${F_DBNAME}" "${F_MSUSER}" \
-           "${F_MSPASSWORD}" "${F_INSERTS}" >> /dev/null
+           "${F_MSPASSWORD}" "${F_INSERTS} -a 32766" >> /dev/null
    end_time=$(get_timestamp_nano)
    total_time="$(get_timestamp_diff_nano "${end_time}" "${start_time}")"
 
@@ -339,19 +344,20 @@ function ms_select_benchmark ()
    			GO
    			 SELECT data
                          FROM ${F_COLLECTION}
-                           WHERE  JSON_VALUE(data, '$.brand') = 'ACME';
+                           WHERE  brand = 'ACME';
 			   GO"
    typeset -r F_SELECT2="SELECT data
                          FROM ${F_COLLECTION}
-                           WHERE  JSON_VALUE(data, '$.name') = 'Phone Service Basic Plan';
+                           WHERE  name = 'Phone Service Basic Plan';
 			   GO"
    typeset -r F_SELECT3="SELECT data
                          FROM ${F_COLLECTION}
-                          WHERE  JSON_VALUE(data, '$.name') = 'AC3 Case Red';
+                          WHERE  name = 'AC3 Case Red';
 			  GO"
    typeset -r F_SELECT4="SELECT data
                           FROM ${F_COLLECTION}
-                            WHERE  JSON_VALUE(data, '$.type') = 'service';
+                            WHERE type = 'service';
+			  SET QUOTED_IDENTIFIER ON;
 			    GO"
    local START end_time
 
@@ -420,7 +426,7 @@ function mssql_version ()
    typeset -r F_SQL="SELECT @@VERSION;
   			 GO"
 
-   output=$(run_mssql "${F_MSHOST}" "${F_MSPORT}" "${F_DBNAME}" "${F_MSUSER}" \
+   output=$(run_mssql "${F_MSHOST}" "${F_MSPORT}" "master" "${F_MSUSER}" \
            "${F_MSPASSWORD}" "${F_SQL}")
    version=$(echo $output | grep -o ' - [0-9\.]* ' | cut -f3 -d' ')
 
@@ -440,6 +446,7 @@ function mssql_dropping ()
   typeset -r F_MSPASSWORD="$5"
   typeset -r F_TABLE="$6"
   typeset -r F_SQL1="	TRUNCATE TABLE ${F_TABLE};
+  			SET QUOTED_IDENTIFIER ON;
   			GO"	
   process_log "deleting rows in MSSQL."
   run_mssql "${F_MSHOST}" "${F_MSPORT}" "${F_DBNAME}" "${F_MSUSER}" "${F_MSPASSWORD}" "${F_SQL1}"

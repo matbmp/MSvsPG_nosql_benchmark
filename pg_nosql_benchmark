@@ -78,7 +78,7 @@ source ${DIRECTORY}/lib/mssql_func_lib.sh
 ################################################################################
 # declare require arrays
 ################################################################################
-declare -a json_rows=(10000)
+declare -a json_rows=(50000)
 
 declare -a pg_size_time
 declare -a pg_copy_time
@@ -245,7 +245,8 @@ do
                                                            "${MSUSER}"       \
                                                            "${MSPASSWORD}"   \
                                                            "${COLLECTION_NAME}" \
-                                                            "${MS_INSERTS}"
+                                                           "${MS_INSERTS}"	\
+                        				   "${json_rows[${indx}]}"
                                 )
    
    echo "$ms_inserts_time[@]"
