@@ -164,16 +164,19 @@ function ms_relation_size ()
    typeset -r F_MSUSER="$4"
    typeset -r F_MSPASSWORD="$5"
    typeset -r F_RELATION="$6"
-   typeset -r F_SQL="SELECT CAST((SUM(a.used_pages) * 1024) AS NUMERIC(36, 0)) FROM sys.tables t
+   typeset -r F_SQL="SELECT CAST((SUM(a.used_pages) * 8096) AS NUMERIC(36, 0)) FROM sys.tables t
 INNER JOIN sys.indexes i ON t.OBJECT_ID = i.object_id
 INNER JOIN sys.partitions p ON i.object_id = p.OBJECT_ID AND i.index_id = p.index_id
 INNER JOIN sys.allocation_units a ON p.partition_id = a.container_id
 WHERE t.Name = '${F_RELATION}'
 GO"
-
+   #typeset -r F_SQL2="EXEC sp_spaceused ${F_RELATION};
+   #			GO"
+   #process_log ${F_SQL2}
    process_log "calculating MSSQL collection size."
    output=$(run_mssql "${F_MSHOST}" "${F_MSPORT}" "${F_DBNAME}" "${F_MSUSER}" \
 	   "${F_MSPASSWORD}" "${F_SQL}")
+   #process_log ${output}
    roz=$(echo ${output} | egrep -o '[0-9]+' | cut -f1 -d' ')
    roz=$(echo $roz | cut -f1 -d' ')
    echo "$roz"

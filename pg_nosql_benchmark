@@ -78,7 +78,7 @@ source ${DIRECTORY}/lib/mssql_func_lib.sh
 ################################################################################
 # declare require arrays
 ################################################################################
-declare -a json_rows=(50000)
+declare -a json_rows=(1000)
 
 declare -a pg_size_time
 declare -a pg_copy_time
@@ -199,6 +199,8 @@ do
                               "${COLLECTION_NAME}"
 
 
+   for (( i=0 ; i < 10 ; i++ ))
+   do
    pg_select_time[${indx}]=$(pg_select_benchmark "${PGHOST}"     \
                                                  "${PGPORT}"     \
                                                  "${PGDATABASE}" \
@@ -206,6 +208,8 @@ do
                                                  "${PGPASSWORD}" \
                                                  "${COLLECTION_NAME}"
                             )
+  echo "$pg_select_time[@]"
+  done
    pg_size_time[${indx}]=$(pg_relation_size "${PGHOST}"     \
                                             "${PGPORT}"     \
                                             "${PGDATABASE}" \
@@ -214,6 +218,8 @@ do
                                             "${COLLECTION_NAME}"
                           )
 
+   for (( i=0 ; i < 10 ; i++ ))
+   do
    ms_select_time[${indx}]=$(ms_select_benchmark "${MSHOST}"     \
                                                  "${MSPORT}"     \
                                                  "${MSDATABASE}" \
@@ -221,8 +227,10 @@ do
                                                  "${MSPASSWORD}" \
                                                  "${COLLECTION_NAME}"
                             )
+  echo "$ms_select_time[@]"
+  done
    
-   echo "$ms_select_time[@]"
+   #echo "$ms_select_time[@]"
    ms_size_time[${indx}]=$(ms_relation_size "${MSHOST}"     \
                                             "${MSPORT}"     \
                                             "${MSDATABASE}" \
@@ -231,7 +239,6 @@ do
                                             "${COLLECTION_NAME}"
                           )
 
-   echo "$ms_size_time[@]"
    mssql_dropping "${MSHOST}"     \
                   "${MSPORT}"     \
                   "${MSDATABASE}"   \
